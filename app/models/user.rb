@@ -2,11 +2,13 @@
 #
 # Table name: users
 #
-#  id         :integer          not null, primary key
-#  name       :string
-#  email      :string
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
+#  id                 :integer          not null, primary key
+#  name               :string
+#  email              :string
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  encrypted_password :string
+#  salt               :string
 #
 
 class User < ActiveRecord::Base
@@ -25,13 +27,33 @@ class User < ActiveRecord::Base
 
 	before_save :encrypt_password
 
+	# Return true if the user's password matches the submitted password.
+	def has_password?(submitted_password)
+		encrypted_password == encrypt(submitted_password)
+	end
+
+  def self.authenticate(email,submitted_password)
+    user = find_by_email(email)
+    return nil if user.nil?
+    return user if user.has_password?(submitted_password)
+  end
+
 	private
 
+	def encrypt(string)
+		secure_hash("#{salt}--#{string}")
+	end
+
 	def encrypt_password
+		self.salt = make_salt if new_record?
 		self.encrypted_password = encrypt(password)
 	end
 
-	def encrypt(string)
-		string # temporary
+	def make_salt
+		secure_hash("#{Time.now.utc}--#{password}")
+	end
+
+	def secure_hash(string)
+		Digest::SHA2.hexdigest(string)
 	end
 end

@@ -2,11 +2,13 @@
 #
 # Table name: users
 #
-#  id         :integer          not null, primary key
-#  name       :string
-#  email      :string
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
+#  id                 :integer          not null, primary key
+#  name               :string
+#  email              :string
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  encrypted_password :string
+#  salt               :string
 #
 
 require 'rails_helper'
@@ -99,15 +101,42 @@ RSpec.describe User, type: :model do
 
 	describe "password encryption" do
 		before(:each) do
-			@user = User.create!(@user)
+			@encrypt_user = User.create!(@user)
 		end
 
 		it "should have an encrypted password attribute" do
-			expect(@user).to respond_to(:encrypted_password)
+			expect(@encrypt_user).to respond_to(:encrypted_password)
 		end
 
 		it "should set the encrypted password" do
-			expect(@user.encrypted_password).not_to be_blank
+			expect(@encrypt_user.encrypted_password).not_to be_blank
 		end
+
+		describe "has_password? method" do
+			it "should be true if the passwords match" do
+				expect(@encrypt_user.has_password?(@user[:password])).to be_truthy
+			end
+
+			it "should be false if the passwords don't match" do
+				expect(@encrypt_user.has_password?("invalid")).to be_falsy
+			end
+		end
+
+    describe "authenticate method" do
+      it "should return nil on email/password mismatch" do
+        wrong_password_user = User.authenticate(@user[:email],"wrongpass")
+        expect(wrong_password_user).to be_nil
+      end
+
+      it "should return nil for an email address with no user" do
+        nonexistent_user = User.authenticate("wrong@example.com",@user[:password])
+        expect(nonexistent_user).to be_nil
+      end
+
+      it "should return the user on email/password match" do
+        matching_user = User.authenticate(@user[:email],@user[:password])
+        expect(matching_user).to eq(@encrypt_user)
+      end
+    end
 	end
 end
